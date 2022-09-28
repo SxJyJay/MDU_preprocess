@@ -11,4 +11,10 @@ Similarly, you can also create boundary projection data by running:
 ```
 python virtual_boundary_gen.py --info_path data/nuScenes/infos_train_10sweeps_withvelo_filter_True.pkl  MODEL.WEIGHTS centernet2_checkpoint.pth
 ```
+You can also create depth completion-based projection data (at most 10,000 pts for each instance) by running:
+```
+python virtual_depth_completion_nuscenes.py --info_path data/nuScenes/infos_train_10sweeps_withvelo_filter_True.pkl  MODEL.WEIGHTS centernet2_checkpoint.pth
+```
+If you want to increase or reduce the number of pts per instance, please modify the upper bound of random selection [here](https://github.com/SxJyJay/multi-depth-projection/blob/e1ad4b2c3b9121edb88c9c7d65c334a3d62e3d1b/virtual_depth_completion_nuscenes.py#L398).
+
 Don't forget to modify the path of saving the created data.
