@@ -14,7 +14,7 @@ from nuscenes.utils.geometry_utils import view_points
 from pyquaternion import Quaternion
 
 import matplotlib.pyplot as plt
-from ip_basic import depth_map_utils
+# from ip_basic import depth_map_utils
 cmap = plt.cm.jet
 
 import cv2
