@@ -186,6 +186,7 @@ def add_virtual_mask(masks, labels, points, raw_points, num_virtual=50, dist_thr
             torch.ones((1, len(per_cam_virtual_pts)), device=per_cam_virtual_pts.device, dtype=torch.float32)],
             dim=0
         )
+        
         per_cam_virtual_pts_3d = reverse_view_points(per_cam_virtual_pts_padded, per_cam_K_nearest_depths, intrinsics[i])
         per_cam_virtual_pts_3d[:3] = torch.matmul(torch.inverse(transforms[i]),
                     torch.cat([
@@ -194,8 +195,9 @@ def add_virtual_mask(masks, labels, points, raw_points, num_virtual=50, dist_thr
                     ], dim=0)
             )[:3]
         per_cam_virtual_pts_3d = per_cam_virtual_pts_3d.transpose(1,0)
-        
-        per_cam_all_virtual_pixel_indices = per_cam_virtual_pts[:,:2]
+
+        # per_cam_all_virtual_pixel_indices = per_cam_virtual_pts[:,:2]
+        per_cam_all_virtual_pixel_indices = torch.cat([per_cam_virtual_pts[:,:2], per_cam_K_nearest_depths.unsqueeze(1)], dim=1)
         per_cam_all_virtual_pts = per_cam_virtual_pts_3d
         per_cam_all_virtual_labels = per_cam_K_nearest_labels
 
@@ -240,13 +242,14 @@ def add_virtual_mask(masks, labels, points, raw_points, num_virtual=50, dist_thr
         per_cam_points = points[i]
         per_cam_raw_points = raw_points_cams[i]
         per_cam_point_labels = cam_points_labels[i]
-        all_real_pixel_indices.append(per_cam_points[per_cam_points_valid][:, :2])
+        # all_real_pixel_indices.append(per_cam_points[per_cam_points_valid][:, :2])
+        all_real_pixel_indices.append(per_cam_points[per_cam_points_valid][:, :3])
         # append labels after points
         all_real_points.append(torch.cat(
             [per_cam_raw_points[per_cam_points_valid][:, :3], per_cam_point_labels[per_cam_points_valid]], dim=-1))
         # all_real_points.append(per_cam_raw_points[per_cam_points_valid][:, :3])
         # all_real_point_labels.append(per_cam_point_labels[per_cam_points_valid])
-
+    
     return all_virtual_pixel_indices, all_real_pixel_indices, all_virtual_points, all_real_points
 
 def init_detector(args):
@@ -317,7 +320,7 @@ def process_one_frame(info, predictor, data, num_camera=6):
     if len(masks) == 0:
         res = None
     else:
-        res  = add_virtual_mask(masks.clone(), labels.clone(), P.clone(), to_tensor(lidar_points), num_virtual=200,
+        res  = add_virtual_mask(masks.clone(), labels.clone(), P.clone(), to_tensor(lidar_points), num_virtual=50,
             intrinsics=to_batch_tensor(all_cams_intrinsic), transforms=to_batch_tensor(all_cams_from_lidar), K=6)
 
     
@@ -348,7 +351,7 @@ def main(args):
     data_loader = DataLoader(
         PaintDataSet(args.info_path, predictor),
         batch_size=1,
-        num_workers=8,
+        num_workers=6,
         collate_fn=simple_collate,
         pin_memory=True,
         shuffle=False
@@ -368,13 +371,13 @@ def main(args):
         #     import ipdb
         #     ipdb.set_trace()
         tokens = info['lidar_path'].split('/')
-        available_root = '/share_io02_hdd/jiaoyang/nuScenes/'
+        available_root = '/share_io02_ssd/jiaoyang/nuScenes/'
         # output_path = os.path.join(*tokens[:-2], "FOREGROUND_MIXED_6NN", tokens[-1]+'.pkl.npy')
         # output_path = '/' + output_path
-        output_path = os.path.join(available_root, tokens[-3], "FOREGROUND_MIXED_6NN_200pts", tokens[-1]+'.pkl.npy')
+        output_path = os.path.join(available_root, tokens[-3], "FOREGROUND_MIXED_6NN_WITH_DEPTH", tokens[-1]+'.pkl.npy')
         
-        if os.path.exists(output_path):
-            continue
+        # if os.path.exists(output_path):
+        #     continue
 
         res = process_one_frame(info, predictor, data)
 
@@ -421,10 +424,10 @@ if __name__ == '__main__':
     # if not os.path.isdir('data/nuScenes/sweeps/FOREGROUND_MIXED_6NN'):
     #     os.mkdir('data/nuScenes/sweeps/FOREGROUND_MIXED_6NN')
 
-    if not os.path.isdir('/share_io02_hdd/jiaoyang/nuScenes/samples/FOREGROUND_MIXED_6NN_200pts'):
-        os.mkdir('/share_io02_hdd/jiaoyang/nuScenes/samples/FOREGROUND_MIXED_6NN_200pts')
+    if not os.path.isdir('/share_io02_ssd/jiaoyang/nuScenes/samples/FOREGROUND_MIXED_6NN_WITH_DEPTH'):
+        os.mkdir('/share_io02_ssd/jiaoyang/nuScenes/samples/FOREGROUND_MIXED_6NN_WITH_DEPTH')
 
-    if not os.path.isdir('/share_io02_hdd/jiaoyang/nuScenes/sweeps/FOREGROUND_MIXED_6NN_200pts'):
-        os.mkdir('/share_io02_hdd/jiaoyang/nuScenes/sweeps/FOREGROUND_MIXED_6NN_200pts')
+    if not os.path.isdir('/share_io02_ssd/jiaoyang/nuScenes/sweeps/FOREGROUND_MIXED_6NN_WITH_DEPTH'):
+        os.mkdir('/share_io02_ssd/jiaoyang/nuScenes/sweeps/FOREGROUND_MIXED_6NN_WITH_DEPTH')
 
     main(args)
